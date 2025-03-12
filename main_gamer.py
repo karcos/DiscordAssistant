@@ -1,10 +1,12 @@
 import discord as dc
 from assistant import Assistant
+from google_calendar_handler import CalendarGoogleHandler
 from dotenv import load_dotenv
 from os import getenv
 
 class MainGamer:
     def __init__(self) -> None:
+        calendar: CalendarGoogleHandler = CalendarGoogleHandler()
         self._assistant: Assistant = Assistant()
         self._prepare_commands()
 
