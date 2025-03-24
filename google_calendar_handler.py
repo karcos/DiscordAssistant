@@ -2,8 +2,10 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build, Resource
+from dotenv import load_dotenv
 
-from typing import Any, Final, Literal, get_args
+from typing import Any, Final, Literal
+from datetime_range import DateTimeRange
 
 import os
 import datetime as dt
@@ -16,13 +18,7 @@ class CalendarGoogleHandler:
 
         self._service: Resource = build('calendar', 'v3', credentials=self._creds)
 
-        self._CALENDAR: Final[dict[str, str]] = {
-            'Praca': os.getenv('PRACA_ID'),
-            'Korepetycje': os.getenv('KOREPETYCJE_ID'),
-            'Prywatne': os.getenv('PRYWATNE_ID')
-        }
-
-        self._show_all_calendars()
+        self._CALENDAR: Final[dict[str, str]] = self._get_calendars_ids()
 
     def _get_credentials(self) -> None:
         if os.path.exists('token.json'):
@@ -39,16 +35,16 @@ class CalendarGoogleHandler:
             with open('token.json', 'w') as token:
                 token.write(self._creds.to_json())
 
-    def _show_all_calendars(self) -> None:
+    def _get_calendars_ids(self) -> dict[str, str]:
         calendars_result: dict[str, Any] = self._service.calendarList().list().execute()
         calendars: list[dict[str, Any]] = calendars_result.get('items', [])
 
-        if not calendars:
-            print("Nie znaleziono żadnych kalendarzy.")
-        else:
-            print("Dostępne kalendarze:")
-            for calendar in calendars:
-                print(f"Nazwa: {calendar['summary']}, ID: {calendar['id']}")
+        result: dict[str, str] = dict()
+        for calendar in calendars:
+            if calendar['accessRole'] == 'owner':
+                result[calendar['summary']] = calendar['id']
+
+        return result
 
     def get_events(self,
                    calendar_name: Literal['Praca', 'Korepetycje', 'Prywatne'],
@@ -61,3 +57,15 @@ class CalendarGoogleHandler:
         events: list[dict[str, Any]] = events_result.get('items', [])
 
         return events
+
+    def get_next_lesson(self, now: dt.datetime, pupil_dc_id: int) -> DateTimeRange:
+        response: dict[str, Any] = self._service.events().list(calendarId=self._CALENDAR['Korepetycje'],
+                                                               timeMin=now.isoformat(),
+                                                               maxResults=1,
+                                                               singleEvents=True,
+                                                               q=pupil_dc_id).execute()
+
+        event = response.get('items', [])[0]
+        return DateTimeRange(start=dt.datetime.fromisoformat(event['start'].get('dateTime')),
+                             end=dt.datetime.fromisoformat(event['end'].get('dateTime')))
+
