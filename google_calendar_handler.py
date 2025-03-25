@@ -5,6 +5,9 @@ from googleapiclient.discovery import build, Resource
 from dotenv import load_dotenv
 
 from typing import Any, Final, Literal
+
+from httplib2 import parse_uri
+
 from datetime_range import DateTimeRange
 
 import os
@@ -46,26 +49,29 @@ class CalendarGoogleHandler:
 
         return result
 
-    def get_events(self,
-                   calendar_name: Literal['Praca', 'Korepetycje', 'Prywatne'],
-                   date: str | dt.datetime) -> list[dict[str, Any]]:
+    # def get_events(self,
+    #                calendar_name: Literal['Praca', 'Korepetycje', 'Prywatne'],
+    #                date: str | dt.datetime) -> list[dict[str, Any]]:
+    #
+    #     now: str = dt.datetime.now(dt.timezone.utc).isoformat()  # ISO 8601
+    #     events_result: dict[str, Any] = self._service.events().list(calendarId=self._CALENDAR[calendar_name],
+    #                                                                 timeMin=now, maxResults=1,
+    #                                                                 singleEvents=True, orderBy='startTime').execute()
+    #     events: list[dict[str, Any]] = events_result.get('items', [])
+    #
+    #     return events
 
-        now: str = dt.datetime.now(dt.timezone.utc).isoformat()  # ISO 8601
-        events_result: dict[str, Any] = self._service.events().list(calendarId=self._CALENDAR[calendar_name],
-                                                                    timeMin=now, maxResults=1,
-                                                                    singleEvents=True, orderBy='startTime').execute()
-        events: list[dict[str, Any]] = events_result.get('items', [])
-
-        return events
-
-    def get_next_lesson(self, now: dt.datetime, pupil_dc_id: int) -> DateTimeRange:
+    def get_next_lesson(self, now: dt.datetime, pupil_dc_id: int) -> Literal[False] | DateTimeRange:
         response: dict[str, Any] = self._service.events().list(calendarId=self._CALENDAR['Korepetycje'],
                                                                timeMin=now.isoformat(),
                                                                maxResults=1,
                                                                singleEvents=True,
                                                                q=pupil_dc_id).execute()
+        if event := response.get('items', []):
+            return DateTimeRange(start=dt.datetime.fromisoformat(event[0]['start'].get('dateTime')),
+                                 end=dt.datetime.fromisoformat(event[0]['end'].get('dateTime')))
+        else:
+            return False
 
-        event = response.get('items', [])[0]
-        return DateTimeRange(start=dt.datetime.fromisoformat(event['start'].get('dateTime')),
-                             end=dt.datetime.fromisoformat(event['end'].get('dateTime')))
-
+    def check_availability(self, date: dt.datetime) -> Literal[True] | dt.datetime:
+        pass
