@@ -1,5 +1,5 @@
 import locale
-from typing import Literal
+from typing import Literal, Final
 
 import discord as dc
 from discord import app_commands
@@ -26,10 +26,11 @@ class MainGamer:
         @self._assistant.tree.command(name='najblizsza',
                                       description='Pokaże Ci na kiedy jesteśmy umówieni na kolejne zajęcia')
         async def closest_lesson(interaction: dc.Interaction) -> None:
-            closest: DateTimeRange | Literal[False] = self._calendar.get_next_lesson(dt.datetime.now(dt.UTC), interaction.user.id)
+            closest: DateTimeRange | Literal[False] = self._calendar.get_date_next_event(dt.datetime.now(dt.UTC),
+                                                                                         interaction.user.id)
             if closest:
-                day_name: str = closest.start.strftime('%A')
-                message: str = (f'Twoja najbliższa lekcja odbędzie się {closest.start.strftime('%d.%m.%Y')}'
+                day_name: Final[str] = closest.start.strftime('%A')
+                message: Final[str] = (f'Twoja najbliższa lekcja odbędzie się {closest.start.strftime('%d.%m.%Y')}'
                                 f' ({day_name}) od {closest.start.strftime('%H:%M')}'
                                 f' do {closest.end.strftime('%H:%M')}')
 
@@ -43,37 +44,33 @@ class MainGamer:
         @app_commands.rename(day='dzień', month='miesiac', year='rok', hour='godzina', minute='minuta', duration='czas_trwania')
         async def arrange_meeting(interaction: dc.Interaction,
                                   day: app_commands.Range[int, 1, 31],
-                                  month: str,
+                                  month: app_commands.Range[int, 1, 12],
                                   year: app_commands.Range[int, 2025, 2100],
                                   hour: app_commands.Range[int, 0, 23],
-                                  minute: app_commands.Range[int, 1, 59],
-                                  duration: app_commands.Range[int, 1, 2] = 1) -> None:
+                                  minute: app_commands.Range[int, 0, 59],
+                                  duration: app_commands.Range[int, 1, 2]) -> None:
 
             try:
-                month_number: int = dt.datetime.strptime(month, '%B').month
-            except ValueError as e:
-                await interaction.response.send_message('Została podana zła nazwa miesiąca :persevere:',
-                                                        ephemeral=True)
-                return
-
-            try:
-                date: dt.datetime = dt.datetime(year, month_number, day, hour, minute)
+                date: dt.datetime = dt.datetime(year, month, day, hour, minute)
             except ValueError as e:
                 await interaction.response.send_message('Ten miesiąc nie ma tyle dni :face_with_raised_eyebrow:',
                                                         ephemeral=True)
                 return
 
+            self._calendar.check_availability(date, date.replace(hour=date.hour + duration))
+
+
 
 
         @arrange_meeting.autocomplete('month')
         async def month_autocomplete(interaction: dc.Interaction, current: str) -> list[app_commands.Choice[str]]:
-            months = [
+            months: tuple[str, ...] = (
                 "styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec",
                 "lipiec", "sierpień", "wrzesień", "październik", "listopad", "grudzień"
-            ]
+            )
 
             return [
-                app_commands.Choice(name=m, value=m)
-                for m in months
-                if current.lower() in m.lower()
+                app_commands.Choice(name=month, value=i + 1)
+                for i, month in enumerate(months)
+                if current.lower() in month.lower()
             ]
