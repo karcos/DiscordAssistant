@@ -59,13 +59,13 @@ class CalendarGoogleHandler:
         else:
             return False
 
-    def check_availability(self, date: dt.datetime, end_date: dt.datetime) -> Literal[True] | dt.datetime:
+    def check_availability(self, date: dt.datetime, end_date: dt.datetime) -> bool:
         req_template: dict[str, Any] = GOOGLE_API_REQ_JSON_IF_BUSY
 
         req_template['timeMin'] = date.isoformat()
         req_template['timeMax'] = end_date.isoformat()
         req_template['items'] = [{'id': id[1]} for id in self._get_calendars_ids().items()]
-        print(req_template)
+
         result: dict[str, Any] = self._service.freebusy().query(body=req_template).execute()
 
         for id in self._get_calendars_ids().items():

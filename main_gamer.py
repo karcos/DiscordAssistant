@@ -1,3 +1,4 @@
+import calendar
 import locale
 from typing import Literal, Final
 
@@ -45,10 +46,10 @@ class MainGamer:
         async def arrange_meeting(interaction: dc.Interaction,
                                   day: app_commands.Range[int, 1, 31],
                                   month: app_commands.Range[int, 1, 12],
-                                  year: app_commands.Range[int, 2025, 2100],
+                                  year: app_commands.Range[int, 2025, 2026],
                                   hour: app_commands.Range[int, 0, 23],
                                   minute: app_commands.Range[int, 0, 59],
-                                  duration: app_commands.Range[int, 1, 2]) -> None:
+                                  duration: app_commands.Range[int, 1, 5]) -> None:
 
             try:
                 date: dt.datetime = dt.datetime(year, month, day, hour, minute)
@@ -64,10 +65,7 @@ class MainGamer:
 
         @arrange_meeting.autocomplete('month')
         async def month_autocomplete(interaction: dc.Interaction, current: str) -> list[app_commands.Choice[str]]:
-            months: tuple[str, ...] = (
-                "styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec",
-                "lipiec", "sierpień", "wrzesień", "październik", "listopad", "grudzień"
-            )
+            months: tuple[str, ...] = tuple(calendar.month_name[1:])
 
             return [
                 app_commands.Choice(name=month, value=i + 1)
