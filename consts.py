@@ -22,9 +22,9 @@ GOOGLE_API_REQ_JSON_NEW_EVENT: Final[dict[str, Any]] = {
     }
 }
 GOOGLE_API_REQ_JSON_IF_BUSY: Final[dict[str, Any]] = {
-    "timeMin": None,
-    "timeMax": None,
-    "items": None
+    'timeMin': None,
+    'timeMax': None,
+    'items': None
 }
 
 AVAILABLE_HOURS: Final[dict[int, TimeRange]] = {
@@ -36,3 +36,30 @@ AVAILABLE_HOURS: Final[dict[int, TimeRange]] = {
     5: TimeRange(start=time(10), end=time(20)),
     6: TimeRange(start=time(10), end=time(20))
 }
+
+TIME_ZONES: tuple[str, ...] = (
+    'Pacific/Pago_Pago',
+    'Pacific/Honolulu',
+    'America/Anchorage',
+    'America/Los_Angeles',
+    'America/Denver',
+    'America/Chicago',
+    'America/New_York',
+    'America/Puerto_Rico',
+    'America/Sao_Paulo',
+    'Atlantic/South_Georgia',
+    'Atlantic/Azores',
+    'UTC',
+    'Europe/Berlin',
+    'Africa/Johannesburg',
+    'Europe/Moscow',
+    'Asia/Dubai',
+    'Asia/Karachi',
+    'Asia/Dhaka',
+    'Asia/Bangkok',
+    'Asia/Shanghai',
+    'Asia/Tokyo',
+    'Australia/Brisbane',
+    'Pacific/Guadalcanal',
+    'Pacific/Tarawa',
+)

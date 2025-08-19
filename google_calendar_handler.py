@@ -1,4 +1,5 @@
 import datetime as dt
+from datetime import timezone, tzinfo
 import os
 from typing import Any, Final, Literal
 
@@ -48,7 +49,7 @@ class CalendarGoogleHandler:
         return result
 
     def get_date_next_event(self, now: dt.datetime, pupil_dc_id: int) -> Literal[False] | DateTimeRange:
-        response: dict[str, Any] = self._service.events().list(calendarId=self._CALENDAR['Korepetycje'],
+        response: dict[str, Any] = self._service.events().list(calendarId=self._CALENDAR['Korepetycje'], # NOQA
                                                                timeMin=now.isoformat(),
                                                                maxResults=1,
                                                                singleEvents=True,
@@ -60,15 +61,15 @@ class CalendarGoogleHandler:
             return False
 
     def check_availability(self, date: dt.datetime, end_date: dt.datetime) -> bool:
-        req_template: dict[str, Any] = GOOGLE_API_REQ_JSON_IF_BUSY
+        req_template: dict[str, Any] = GOOGLE_API_REQ_JSON_IF_BUSY.copy()
 
         req_template['timeMin'] = date.isoformat()
         req_template['timeMax'] = end_date.isoformat()
-        req_template['items'] = [{'id': id[1]} for id in self._get_calendars_ids().items()]
+        req_template['items'] = [{'id': cal_id} for _, cal_id in self._get_calendars_ids().items()]
 
         result: dict[str, Any] = self._service.freebusy().query(body=req_template).execute()
 
-        for id in self._get_calendars_ids().items():
-            busy_times = result['calendars'][id]['busy']
-            print(busy_times)
+        busy_dict: list[dict[str, str]] = [result['calendars'][cal_id]['busy'] for cal_id in self._CALENDAR.values()]
+
+        return not any(busy_dict)
 
