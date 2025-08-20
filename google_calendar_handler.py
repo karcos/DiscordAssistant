@@ -1,5 +1,4 @@
 import datetime as dt
-from datetime import timezone, tzinfo
 import os
 from typing import Any, Final, Literal
 
@@ -8,8 +7,9 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build, Resource
 
+from consts import (GOOGLE_API_SCOPES, GOOGLE_API_TOKEN_PATH, GOOGLE_API_CREDS_PATH, GOOGLE_API_REQ_JSON_IF_BUSY,
+                    WORKING_TIME_RANGE)
 from datetime_range import DateTimeRange
-from consts import GOOGLE_API_SCOPES, GOOGLE_API_TOKEN_PATH, GOOGLE_API_CREDS_PATH, GOOGLE_API_REQ_JSON_IF_BUSY
 
 
 class CalendarGoogleHandler:
@@ -60,16 +60,24 @@ class CalendarGoogleHandler:
         else:
             return False
 
-    def check_availability(self, date: dt.datetime, end_date: dt.datetime) -> bool:
+    def check_availability(self, date: DateTimeRange) -> int:
+        if date.start.time().minute % 30 != 0:
+            return -1
+        elif date.start.time() not in WORKING_TIME_RANGE:
+            return -2
+
+        date.start -= dt.timedelta(minutes=31)
+        date.end -= dt.timedelta(minutes=31)
+
         req_template: dict[str, Any] = GOOGLE_API_REQ_JSON_IF_BUSY.copy()
 
-        req_template['timeMin'] = date.isoformat()
-        req_template['timeMax'] = end_date.isoformat()
+        req_template['timeMin'] = date.start.isoformat()
+        req_template['timeMax'] = date.end.isoformat()
         req_template['items'] = [{'id': cal_id} for _, cal_id in self._get_calendars_ids().items()]
 
         result: dict[str, Any] = self._service.freebusy().query(body=req_template).execute()
 
         busy_dict: list[dict[str, str]] = [result['calendars'][cal_id]['busy'] for cal_id in self._CALENDAR.values()]
 
-        return not any(busy_dict)
+        return int(not any(busy_dict))
 

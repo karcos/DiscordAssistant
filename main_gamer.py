@@ -46,28 +46,52 @@ class MainGamer:
                                       description='Umów spotkanie!')
         @app_commands.rename(day='dzień', month='miesiąc', year='rok', hour='godzina', minute='minuta',
                              duration='czas_trwania', time_zone='strefa_czasowa')
+        @app_commands.choices(
+            minute=[
+                app_commands.Choice(name="00", value=0),
+                app_commands.Choice(name="30", value=30)
+            ]
+        )
         async def arrange_meeting(interaction: dc.Interaction,
                                   day: app_commands.Range[int, 1, 31],
                                   month: app_commands.Range[int, 1, 12],
                                   year: app_commands.Range[int, 2025, 2026],
                                   hour: app_commands.Range[int, 0, 23],
-                                  minute: app_commands.Range[int, 0, 59],
-                                  duration: app_commands.Range[int, 1, 5],
+                                  minute: app_commands.Choice[int],
+                                  duration: app_commands.Range[float, 1, 5],
                                   time_zone: str) -> None:
 
+            if not (duration * 2).is_integer():
+                await interaction.response.send_message('Podaj proszę czas trwania lekcji jako liczba pełna, lub z połówką, np 1, 1.5, 2, 2.5', # NOQA
+                                                        ephemeral=True)
+                return
+
             try:
-                date: dt.datetime = dt.datetime(year, month, day, hour, minute)
+                date: dt.datetime = dt.datetime(year, month, day, hour, minute.value)
             except ValueError as e:
                 await interaction.response.send_message('Ten miesiąc nie ma tyle dni :face_with_raised_eyebrow:', # NOQA
                                                         ephemeral=True)
                 return
+            date += dt.timedelta(hours=duration)
+            availability: int = self._calendar.check_availability(DateTimeRange(start=date.replace(tzinfo=ZoneInfo(time_zone)),
+                                                                                end=date.replace(hour=date + dt.timedelta(hours=duration), # TODO: repair that
+                                                                                                 minute=int((duration - int(duration) * 60)),
+                                                                                                 tzinfo=ZoneInfo(time_zone))))
+            message: str = str()
+            if availability == 1:
+                raise NotImplemented
+                # TODO: make event and update message
+            elif availability == -2:
+                raise NotImplemented
+            elif availability == -1:
+                raise NotImplemented
+            elif availability == 0:
+                raise NotImplemented
+            else:
+                raise ValueError(f'Function CalendarGoogleHandler()._check_availability() returns unexpected value: {availability}')
 
-            availability: bool = self._calendar.check_availability(date.replace(tzinfo=ZoneInfo(time_zone)),
-                                                                   date.replace(hour=date.hour + duration,
-                                                                                tzinfo=ZoneInfo(time_zone)))
 
-            if availability:
-                pass # TODO: make sure that space between event are not-less than 30 mins and then make new event
+
 
 
 

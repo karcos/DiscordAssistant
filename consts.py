@@ -1,6 +1,6 @@
 from datetime import time
 from typing import Final, Any
-from time_range import TimeRange
+from datetime_range import DateTimeRange
 
 GOOGLE_API_SCOPES: Final[list[str]] = ['https://www.googleapis.com/auth/calendar']
 GOOGLE_API_TOKEN_PATH: Final[str] = 'token.json'
@@ -27,14 +27,14 @@ GOOGLE_API_REQ_JSON_IF_BUSY: Final[dict[str, Any]] = {
     'items': None
 }
 
-AVAILABLE_HOURS: Final[dict[int, TimeRange]] = {
-    0: TimeRange(start=time(15), end=time(20)),
-    1: TimeRange(start=time(15), end=time(20)),
-    2: TimeRange(start=time(15), end=time(20)),
-    3: TimeRange(start=time(15), end=time(20)),
-    4: TimeRange(start=time(15), end=time(20)),
-    5: TimeRange(start=time(10), end=time(20)),
-    6: TimeRange(start=time(10), end=time(20))
+AVAILABLE_HOURS: Final[dict[int, DateTimeRange]] = {
+    0: DateTimeRange(start=time(15), end=time(20)),
+    1: DateTimeRange(start=time(15), end=time(20)),
+    2: DateTimeRange(start=time(15), end=time(20)),
+    3: DateTimeRange(start=time(15), end=time(20)),
+    4: DateTimeRange(start=time(15), end=time(20)),
+    5: DateTimeRange(start=time(10), end=time(20)),
+    6: DateTimeRange(start=time(10), end=time(20))
 }
 
 TIME_ZONES: tuple[str, ...] = (
@@ -63,3 +63,5 @@ TIME_ZONES: tuple[str, ...] = (
     'Pacific/Guadalcanal',
     'Pacific/Tarawa',
 )
+
+WORKING_TIME_RANGE: DateTimeRange = DateTimeRange(start=time(9), end=time(22))
