@@ -1,14 +1,16 @@
 import datetime as dt
 import os
+import copy
 from typing import Any, Final, Literal
+from zoneinfo import ZoneInfo
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build, Resource
 
-from consts import (GOOGLE_API_SCOPES, GOOGLE_API_TOKEN_PATH, GOOGLE_API_CREDS_PATH, GOOGLE_API_REQ_JSON_IF_BUSY,
-                    WORKING_TIME_RANGE)
+from consts import (GOOGLE_API_REQ_JSON_NEW_EVENT, GOOGLE_API_SCOPES, GOOGLE_API_TOKEN_PATH, GOOGLE_API_CREDS_PATH,
+                    GOOGLE_API_REQ_JSON_IF_BUSY, WORKING_TIME_RANGE)
 from datetime_range import DateTimeRange
 
 
@@ -38,7 +40,7 @@ class CalendarGoogleHandler:
                 token.write(self._creds.to_json())
 
     def _get_calendars_ids(self) -> dict[str, str]:
-        calendars_result: dict[str, Any] = self._service.calendarList().list().execute()
+        calendars_result: dict[str, Any] = self._service.calendarList().list().execute() # NOQA
         calendars: list[dict[str, Any]] = calendars_result.get('items', [])
 
         result: dict[str, str] = dict()
@@ -61,23 +63,36 @@ class CalendarGoogleHandler:
             return False
 
     def check_availability(self, date: DateTimeRange) -> int:
-        if date.start.time().minute % 30 != 0:
+        if date.start < dt.datetime.now(tz=ZoneInfo('Europe/Berlin')):
             return -1
-        elif date.start.time() not in WORKING_TIME_RANGE:
+        elif date.start.time() not in WORKING_TIME_RANGE or date.end.time() not in WORKING_TIME_RANGE:
             return -2
 
-        date.start -= dt.timedelta(minutes=31)
-        date.end -= dt.timedelta(minutes=31)
+        start_date =  date.start - dt.timedelta(minutes=31)
+        end_date = date.end + dt.timedelta(minutes=31)
 
-        req_template: dict[str, Any] = GOOGLE_API_REQ_JSON_IF_BUSY.copy()
+        req_template: dict[str, Any] = copy.deepcopy(GOOGLE_API_REQ_JSON_IF_BUSY)
 
-        req_template['timeMin'] = date.start.isoformat()
-        req_template['timeMax'] = date.end.isoformat()
-        req_template['items'] = [{'id': cal_id} for _, cal_id in self._get_calendars_ids().items()]
+        req_template['timeMin'] = start_date.isoformat()
+        req_template['timeMax'] = end_date.isoformat()
+        req_template['items'] = [{'id': cal_id} for _, cal_id in self._CALENDAR.items()]
 
-        result: dict[str, Any] = self._service.freebusy().query(body=req_template).execute()
+        result: dict[str, Any] = self._service.freebusy().query(body=req_template).execute() # NOQA
 
         busy_dict: list[dict[str, str]] = [result['calendars'][cal_id]['busy'] for cal_id in self._CALENDAR.values()]
 
         return int(not any(busy_dict))
+
+    def new_event(self, date: DateTimeRange, nick: str, user_id: int) -> None:
+        json_query: dict[str, Any] = copy.deepcopy(GOOGLE_API_REQ_JSON_NEW_EVENT)
+
+        json_query['summary'] = f'{nick} {user_id}'
+
+        json_query['start']['dateTime'] = date.start.isoformat()
+        json_query['end']['dateTime'] = date.end.isoformat()
+
+        self._service.events().insert(calendarId=self._CALENDAR['Korepetycje'], body=json_query).execute() # NOQA
+
+
+
 

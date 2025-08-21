@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import datetime as dt
 
 
-@dataclass
+@dataclass(frozen=True)
 class DateTimeRange:
     start: dt.datetime | dt.time
     end: dt.datetime | dt.time

@@ -11,11 +11,11 @@ GOOGLE_API_REQ_JSON_NEW_EVENT: Final[dict[str, Any]] = {
     'description': None,
     'start': {
         'dateTime': None,
-        'timeZone': 'Europe/Warsaw'
+        'timeZone': None
     },
     'end': {
         'dateTime': None,
-        'timeZone': 'Europe/Warsaw',
+        'timeZone': None,
     },
     'reminders': {
         'useDefault': True
@@ -37,7 +37,7 @@ AVAILABLE_HOURS: Final[dict[int, DateTimeRange]] = {
     6: DateTimeRange(start=time(10), end=time(20))
 }
 
-TIME_ZONES: tuple[str, ...] = (
+TIME_ZONES: Final[tuple[str, ...]] = (
     'Pacific/Pago_Pago',
     'Pacific/Honolulu',
     'America/Anchorage',
