@@ -28,13 +28,13 @@ GOOGLE_API_REQ_JSON_IF_BUSY: Final[dict[str, Any]] = {
 }
 
 AVAILABLE_HOURS: Final[dict[int, DateTimeRange]] = {
-    0: DateTimeRange(start=time(15), end=time(20)),
-    1: DateTimeRange(start=time(15), end=time(20)),
-    2: DateTimeRange(start=time(15), end=time(20)),
-    3: DateTimeRange(start=time(15), end=time(20)),
-    4: DateTimeRange(start=time(15), end=time(20)),
-    5: DateTimeRange(start=time(10), end=time(20)),
-    6: DateTimeRange(start=time(10), end=time(20))
+    0: DateTimeRange(start=time(9), end=time(22)),
+    1: DateTimeRange(start=time(9), end=time(22)),
+    2: DateTimeRange(start=time(9), end=time(22)),
+    3: DateTimeRange(start=time(9), end=time(22)),
+    4: DateTimeRange(start=time(9), end=time(22)),
+    5: DateTimeRange(start=time(9), end=time(22)),
+    6: DateTimeRange(start=time(9), end=time(22))
 }
 
 TIME_ZONES: Final[tuple[str, ...]] = (
@@ -63,5 +63,3 @@ TIME_ZONES: Final[tuple[str, ...]] = (
     'Pacific/Guadalcanal',
     'Pacific/Tarawa',
 )
-
-WORKING_TIME_RANGE: DateTimeRange = DateTimeRange(start=time(9), end=time(22))

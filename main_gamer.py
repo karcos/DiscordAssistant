@@ -8,7 +8,7 @@ from google_calendar_handler import CalendarGoogleHandler
 from dotenv import load_dotenv
 from os import getenv
 from datetime_range import DateTimeRange
-from consts import TIME_ZONES, WORKING_TIME_RANGE
+from consts import TIME_ZONES, AVAILABLE_HOURS
 from zoneinfo import ZoneInfo
 import locale
 import datetime as dt
@@ -31,8 +31,7 @@ class MainGamer:
                                       description='Pokażę Ci na kiedy jesteśmy umówieni na kolejne zajęcia')
         async def closest_lesson(interaction: dc.Interaction) -> None:
 
-            closest: DateTimeRange | Literal[False] = self._calendar.get_date_next_event(dt.datetime.now(dt.UTC),
-                                                                                         interaction.user.id)
+            closest: DateTimeRange | Literal[False] = self._calendar.get_date_next_event(interaction.user.id)
             if closest:
                 day_name: Final[str] = closest.start.strftime('%A')
                 message: Final[str] = (f'Twoja najbliższa lekcja odbędzie się {closest.start.strftime('%d.%m.%Y')}'
@@ -88,7 +87,7 @@ class MainGamer:
                     message = f'Wystąpił dziwny błąd {e.args}'
 
             elif availability == -2:
-                message = f'Niestety nie pracuję w podanych godzinach :confounded: Pracuję od {WORKING_TIME_RANGE.start} do {WORKING_TIME_RANGE.end}'
+                message = f'Niestety nie pracuję w podanych godzinach :confounded: Pracuję od {AVAILABLE_HOURS[date.start.weekday()].start} do {AVAILABLE_HOURS[date.start.weekday()].end}'
             elif availability == -1:
                 message = 'Czy ta data nie jest z przeszłości? :woozy_face:'
             elif availability == 0:
@@ -108,12 +107,14 @@ class MainGamer:
                                time_zone: str) -> None:
 
             try:
-                date: dt.datetime = dt.datetime(year, month, day, WORKING_TIME_RANGE.start.hour,
-                                                WORKING_TIME_RANGE.start.minute, tzinfo=ZoneInfo(time_zone))
+                date: dt.datetime = dt.datetime(year, month, day, tzinfo=ZoneInfo(time_zone))
             except ValueError as e:
                 await interaction.response.send_message('Ten miesiąc nie ma tyle dni :face_with_raised_eyebrow:', # NOQA
                                                         ephemeral=True)
                 return
+
+            date = date.replace(hour=AVAILABLE_HOURS[date.weekday()].start.hour,
+                                minute=AVAILABLE_HOURS[date.weekday()].start.minute)
 
             if date < dt.datetime.now(ZoneInfo('Europe/Berlin')):
                 await interaction.response.send_message('Nie można usuwać minionych wydarzeń ani wydarzeń odbywających się dzisiaj :disappointed_relieved:', # NOQA
@@ -121,7 +122,8 @@ class MainGamer:
                 return
 
             self._calendar.delete_event(date, interaction.user.id)
-            await interaction.response.send_message(f'Wydarzenie z dnia {date.day} {calendar.month_name[date.month]} {date.year} zostało usunięte')
+            await interaction.response.send_message(f'Wydarzenie z dnia {date.day} {calendar.month_name[date.month]} {date.year} zostało usunięte', # NOQA
+                                                    ephemeral=True)
 
     def _prepare_autocompletes(self) -> None:
 

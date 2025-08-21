@@ -10,7 +10,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build, Resource
 
 from consts import (GOOGLE_API_REQ_JSON_NEW_EVENT, GOOGLE_API_SCOPES, GOOGLE_API_TOKEN_PATH, GOOGLE_API_CREDS_PATH,
-                    GOOGLE_API_REQ_JSON_IF_BUSY, WORKING_TIME_RANGE)
+                    GOOGLE_API_REQ_JSON_IF_BUSY, AVAILABLE_HOURS)
 from datetime_range import DateTimeRange
 
 
@@ -52,10 +52,10 @@ class CalendarGoogleHandler:
 
         return result
 
-    def get_date_next_event(self, now: dt.datetime, pupil_dc_id: int) -> Literal[False] | DateTimeRange:
+    def get_date_next_event(self, pupil_dc_id: int) -> Literal[False] | DateTimeRange:
 
         response: dict[str, Any] = self._service.events().list(calendarId=self._CALENDAR['Korepetycje'], # NOQA
-                                                               timeMin=now.isoformat(),
+                                                               timeMin=dt.datetime.now(ZoneInfo('Europe/Berlin')).isoformat(),
                                                                maxResults=1,
                                                                singleEvents=True,
                                                                q=pupil_dc_id).execute()
@@ -69,7 +69,7 @@ class CalendarGoogleHandler:
 
         if date.start < dt.datetime.now(tz=ZoneInfo('Europe/Berlin')):
             return -1
-        elif date.start.time() not in WORKING_TIME_RANGE or date.end.time() not in WORKING_TIME_RANGE:
+        elif date.start.time() not in AVAILABLE_HOURS[date.start.weekday()] or date.end.time() not in AVAILABLE_HOURS[date.start.weekday()]:
             return -2
 
         start_date = date.start - dt.timedelta(minutes=31)
@@ -102,18 +102,18 @@ class CalendarGoogleHandler:
 
         user_events = self._service.events().list(calendarId=self._CALENDAR['Korepetycje'], # NOQA
                                                   timeMin=date.isoformat(),
-                                                  timeMax=date.replace(hour=WORKING_TIME_RANGE.end.hour,
-                                                                       minute=WORKING_TIME_RANGE.end.minute).isoformat(),
+                                                  timeMax=date.replace(hour=AVAILABLE_HOURS[date.weekday()].end.hour,
+                                                                       minute=AVAILABLE_HOURS[date.weekday()].end.minute).isoformat(),
                                                   q=user_id,
                                                   singleEvents=True,
                                                   orderBy="startTime",
                                                   pageToken=None,
                                                   maxResults=2500,
                                                   ).execute()
-
         for event in user_events['items']:
-            print(event)
-            self._service.events().delete(calendarId=self._CALENDAR['Korepetycje'], eventId=event['id'], sendUpdates=None).execute()
+            self._service.events().delete(calendarId=self._CALENDAR['Korepetycje'], eventId=event['id'],
+                                          sendUpdates=None).execute()
+
 
 
 
