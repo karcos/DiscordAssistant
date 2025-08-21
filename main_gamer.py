@@ -96,7 +96,7 @@ class MainGamer:
 
             await interaction.response.send_message(message, ephemeral=True) # NOQA
 
-        @arrange_meeting.autocomplete('month_name')
+        @arrange_meeting.autocomplete('month')
         async def month_autocomplete(interaction: dc.Interaction, current: str) -> list[app_commands.Choice[str]]:
 
             return [
