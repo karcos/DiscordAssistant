@@ -10,15 +10,17 @@ from os import getenv
 from datetime_range import DateTimeRange
 from consts import TIME_ZONES, WORKING_TIME_RANGE
 from zoneinfo import ZoneInfo
-
+import locale
 import datetime as dt
 
 class MainGamer:
     def __init__(self) -> None:
+        locale.setlocale(locale.LC_TIME, 'Polish_Poland')
 
         self._calendar: CalendarGoogleHandler = CalendarGoogleHandler()
         self._assistant: Assistant = Assistant()
         self._prepare_commands()
+        self._prepare_autocompletes()
 
         load_dotenv()
         self._assistant.run(getenv('DC_TOKEN'))
@@ -52,7 +54,7 @@ class MainGamer:
                 app_commands.Choice(name="30", value=30)
             ]
         )
-        async def arrange_meeting(interaction: dc.Interaction,
+        async def arrange_event(interaction: dc.Interaction,
                                   day: app_commands.Range[int, 1, 31],
                                   month: app_commands.Range[int, 1, 12],
                                   year: app_commands.Range[int, 2025, 2026],
@@ -96,8 +98,40 @@ class MainGamer:
 
             await interaction.response.send_message(message, ephemeral=True) # NOQA
 
+        @self._assistant.tree.command(name='usun',
+                                      description='Usuń umówione spotkanie!')
+        @app_commands.rename(day='dzień', month='miesiąc', year='rok', time_zone='strefa_czasowa')
+        async def delete_event(interaction: dc.Interaction,
+                               day: app_commands.Range[int, 1, 31],
+                               month: app_commands.Range[int, 1, 12],
+                               year: app_commands.Range[int, 2025, 2026],
+                               time_zone: str) -> None:
+
+            try:
+                date: dt.datetime = dt.datetime(year, month, day, WORKING_TIME_RANGE.start.hour,
+                                                WORKING_TIME_RANGE.start.minute, tzinfo=ZoneInfo(time_zone))
+            except ValueError as e:
+                await interaction.response.send_message('Ten miesiąc nie ma tyle dni :face_with_raised_eyebrow:', # NOQA
+                                                        ephemeral=True)
+                return
+
+            if date < dt.datetime.now(ZoneInfo('Europe/Berlin')):
+                await interaction.response.send_message('Nie można usuwać minionych wydarzeń ani wydarzeń odbywających się dzisiaj :disappointed_relieved:', # NOQA
+                                                        ephemeral=True)
+                return
+
+            self._calendar.delete_event(date, interaction.user.id)
+            await interaction.response.send_message(f'Wydarzenie z dnia {date.day} {calendar.month_name[date.month]} {date.year} zostało usunięte')
+
+    def _prepare_autocompletes(self) -> None:
+
+        arrange_meeting: dc.app_commands.Command = self._assistant.tree.get_command('umow')
+        delete_event: dc.app_commands.Command = self._assistant.tree.get_command('usun')
+        assert arrange_meeting is not None and delete_event is not None, 'Komendy nie są zarejestrowane'
+
         @arrange_meeting.autocomplete('month')
-        async def month_autocomplete(interaction: dc.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        @delete_event.autocomplete('month')
+        async def month_autocomplete(interaction: dc.Interaction, current: str) -> list[app_commands.Choice[int]]:
 
             return [
                 app_commands.Choice(name=month_name, value=i)
@@ -106,6 +140,7 @@ class MainGamer:
             ]
 
         @arrange_meeting.autocomplete('time_zone')
+        @delete_event.autocomplete('time_zone')
         async def time_zone_autocomplete(interaction: dc.Interaction, current: str) -> list[app_commands.Choice[str]]:
 
             return [
@@ -113,18 +148,3 @@ class MainGamer:
                 for time_zone in TIME_ZONES
                 if current.lower() in time_zone.lower()
             ]
-
-        @self._assistant.tree.command(name='usun',
-                                      description='Usuń umówione spotkanie!')
-        @app_commands.rename(day='dzień', month='miesiąc', year='rok')
-        async def delete_event(interaction: dc.Interaction,
-                               day: app_commands.Range[int, 1, 31],
-                               month: app_commands.Range[int, 1, 12],
-                               year: app_commands.Range[int, 2025, 2026]) -> None:
-
-            try:
-                date: dt.datetime = dt.datetime(year, month, day)
-            except ValueError as e:
-                await interaction.response.send_message('Ten miesiąc nie ma tyle dni :face_with_raised_eyebrow:', # NOQA
-                                                        ephemeral=True)
-                return
